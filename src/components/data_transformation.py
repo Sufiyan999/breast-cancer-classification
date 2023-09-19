@@ -8,11 +8,12 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import RobustScaler, FunctionTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import  StandardScaler
+from sklearn.decomposition import PCA
 
 from src.constant import *
 from src.exception import CustomException
 from src.logger import logging
-from src.utils.main_utils import MainUtils
+from src.utils.main_utils import MainUtils , MulticollinearityReducer
 from dataclasses import dataclass
 
 @dataclass
@@ -41,18 +42,24 @@ class DataTransformation:
         try:
             imputer_step = ('imputer', SimpleImputer(strategy='constant', fill_value=0))
             scaler_step = ('scaler', RobustScaler())
+            pca_step = ('pca', PCA(n_components=10))      # 95.572% variance
+            multicollinearity_step    =   ('multicollinearity_reducer', MulticollinearityReducer(correlation_threshold=0.95))
             
             preprocessor = Pipeline(
                 steps=[
+                    multicollinearity_step,
                     imputer_step,
-                    scaler_step
+                    scaler_step,
+                    pca_step
                 ]
             )
             return preprocessor
         
         except Exception as e:
             raise CustomException(e,sys)
-        
+
+         
+            
     def initiate_data_transformation(self):
         logging.info(
             "Entered initiate_data_transformation method of Data_Transformation class"
@@ -61,8 +68,8 @@ class DataTransformation:
         try:
             dataframe = self.get_data(feature_store_file_path=self.feature_store_file_path)
             
-            x = dataframe.drop(columns = "target")
             y = dataframe["target"]
+            x = dataframe.drop(columns = "target")
             
             x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=22)
             

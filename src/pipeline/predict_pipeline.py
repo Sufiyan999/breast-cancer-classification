@@ -39,10 +39,13 @@ class PredictionPipeline:
             raise CustomException(e,sys)
         
         
+        
+        
     def predict(self, features):
         try:
             model = self.utils.load_object(self.prediction_pipeline_config.model_file_path)
             preprocessor = self.utils.load_object(self.prediction_pipeline_config.preprocessor_path)
+            
             
             transformed_x = preprocessor.transform(features)
             preds = model.predict(transformed_x)
@@ -57,8 +60,10 @@ class PredictionPipeline:
         try:
             prediction_column_name = "target"
             input_dataframe = pd.read_csv(input_dataframe_path)
-            input_dataframe =  input_dataframe.drop(columns="Unnamed: 0") if "Unnamed: 0" in input_dataframe.columns else input_dataframe
-            input_dataframe = input_dataframe.drop(columns="target")
+            
+            for unwanted_column in ["index" ,"Unnamed: 0" ,"target","_id"]:
+                input_dataframe =  input_dataframe.drop(columns=unwanted_column) if unwanted_column in input_dataframe.columns else input_dataframe
+
             predictions = self.predict(input_dataframe)
             input_dataframe[prediction_column_name] = [pred for pred in predictions]
             target_column_mapping = {0:"Benign", 1:"Malignant"}
@@ -67,6 +72,8 @@ class PredictionPipeline:
             os.makedirs(self.prediction_pipeline_config.prediction_output_dirname, exist_ok=True)
             input_dataframe.to_csv(self.prediction_pipeline_config.prediction_file_path, index=False)
             logging.info("Predictions Completed")
+            
+            return input_dataframe
             
         except Exception as e:
             raise CustomException(e,sys)
